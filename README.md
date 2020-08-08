@@ -1,8 +1,8 @@
-# Neutron
-
 <p align="center">
   <img src="images/neutron.png">
 </p>
+
+# Neutron
 
 Neutron is a simple SAT solver written in OCaml and C.
 
