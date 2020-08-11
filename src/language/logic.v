@@ -9,7 +9,6 @@ Import ListNotations.
 Inductive logic_1 : Set :=
   | Land_1  : logic_1 -> logic_1 -> logic_1
   | Lor_1   : logic_1 -> logic_1 -> logic_1
-  | Liff_1  : logic_1 -> logic_1 -> logic_1
   | Limpl_1 : logic_1 -> logic_1 -> logic_1
   | Lneg_1  : logic_1 -> logic_1
   | Latom_1 : nat -> logic_1.
@@ -29,8 +28,6 @@ Fixpoint remove_impl (l : logic_1) : logic_2 :=
     Lor_2 (remove_impl a) (remove_impl b)
   | Limpl_1 a b =>
     Lor_2 (Lneg_2 (remove_impl a)) (remove_impl b)
-  | Liff_1 a b =>
-    Land_2 (remove_impl a) (remove_impl b)
   | Lneg_1 a => Lneg_2 (remove_impl a)
   | Latom_1 a => Latom_2 a
   end.
@@ -50,8 +47,6 @@ Program Fixpoint remove_impl' (l : logic_1) : {l' : logic_1 | rule_no_impl l'} :
     Lor_1 (remove_impl' a) (remove_impl' b)
   | Limpl_1 a b =>
     Lor_1 (Lneg_1 (remove_impl' a)) (remove_impl' b)
-  | Liff_1 a b =>
-    Land_1 (remove_impl' a) (remove_impl' b)
   | Lneg_1 a => Lneg_1 (remove_impl' a)
   | Latom_1 a => Latom_1 a
   end.
@@ -71,16 +66,13 @@ Next Obligation.
 Defined.
 
 Next Obligation.
-  apply no_impl_and; assumption.
-Defined.
-
-Next Obligation.
   apply no_impl_neg; assumption.
 Defined.
 
 Next Obligation.
-  apply no_impl_atm.
+  apply no_impl_atm; assumption.
 Defined.
+
 
 Inductive rule_no_neg : logic_1 -> Prop :=
   | no_neg_and    : forall a b, rule_no_neg a -> rule_no_neg b -> rule_no_neg (Land_1 a b)
@@ -99,7 +91,8 @@ Program Fixpoint remove_neg (sign : bool) (e : logic_1) (P : rule_no_impl e) {st
     if sign then Lor_1 (remove_neg sign a _) (remove_neg sign b _)
     else Land_1 (remove_neg false a _) (remove_neg false b _)
   | Lneg_1 a =>
-    remove_neg (negb sign) a _
+    if sign then remove_neg false a _
+    else remove_neg true a _
   | Latom_1 n =>
     if sign then Latom_1 n
     else Lneg_1 (Latom_1 n)
@@ -161,6 +154,10 @@ Next Obligation.
 Defined.
 
 Next Obligation.
+  inversion P; assumption.
+Defined.
+
+Next Obligation.
   apply no_neg_atm.
 Defined.
 
@@ -180,19 +177,11 @@ Next Obligation.
   repeat split; intros; discriminate.
 Defined.
 
-Next Obligation.
-  repeat split; intros; discriminate.
-Defined.
-
 
 Fixpoint semL (l : logic_1) (v : nat -> bool) :=
     match l with
     | Land_1 a b => andb (semL a v) (semL b v)
     | Lor_1 a b => orb (semL a v) (semL b v)
-    | Liff_1 a b =>
-      let sa := semL a v in
-      let sb := semL b v in
-      andb (implb sa sb) (implb sa sb)
     | Limpl_1 a b =>
       implb (semL a v) (semL b v)
     | Latom_1 x => v x
@@ -206,8 +195,68 @@ Proof.
   - rewrite IHl1, IHl2; reflexivity.
   - rewrite IHl1, IHl2; reflexivity.
   - rewrite IHl1, IHl2.
-    
-
-
+    destruct (semL l1 x); reflexivity.
+  - rewrite IHl; reflexivity.
+  - reflexivity.
 Qed.
 
+Check (semL).
+
+(* Lemma helper :
+  forall l P v,
+  semL (proj1_sig (remove_neg true (Lneg_1 l) P)) v = semL (Lneg_1 l) v
+  ->
+  semL (proj1_sig (remove_neg false (Lneg_1 l) P)) v = negb (semL (Lneg_1 l) v).
+Proof.
+  intros.
+  simpl.
+  reflexivity.
+  - *)
+
+Lemma helper:
+  forall l P v,
+    semL (proj1_sig (remove_neg false l P)) v
+    =
+    negb (semL (proj1_sig (remove_neg true l P)) v).
+Proof.
+  intros.
+  induction l.
+  - simpl. rewrite IHl1, IHl2.
+    rewrite Bool.negb_andb.
+    reflexivity.
+  - simpl. rewrite IHl1, IHl2.
+    rewrite Bool.negb_orb.
+    reflexivity.
+  - inversion P.
+  - simpl. rewrite IHl.
+    rewrite Bool.negb_involutive.
+    reflexivity.
+  - simpl. reflexivity.
+Qed.
+
+Lemma helper':
+  forall l P v,
+    negb (semL (proj1_sig (remove_neg false l P)) v)
+    =
+    semL (proj1_sig (remove_neg true l P)) v.
+Proof.
+  intros.
+  rewrite helper.
+  apply Bool.negb_involutive.
+Qed.
+
+Theorem remove_neg_correct:
+  forall (l : logic_1),
+  forall (P : rule_no_impl l),
+  semL (proj1_sig (remove_neg true l P)) = semL l.
+Proof.
+  intros; induction l; simpl.
+  - rewrite IHl1, IHl2; reflexivity.
+  - rewrite IHl1, IHl2; reflexivity.
+  - reflexivity.
+  - apply functional_extensionality.
+    intro.
+    rewrite helper, IHl.
+    reflexivity.
+  - reflexivity.
+Qed.
