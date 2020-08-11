@@ -82,3 +82,7 @@ setup.log
 
 # Local OPAM switch
 _opam/
+
+.vscode
+.lia.cache
+.vo
