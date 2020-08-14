@@ -566,6 +566,192 @@ Next Obligation.
 Defined.
 
 
+Program Fixpoint merge' (l1 : logic) (l2 : logic) {measure (variant l1 + variant l2)} : logic :=
+  match l2 with
+  | Land a b =>
+    Land (merge' l1 a) (merge' l1 b)
+  | Lor a b =>
+    match l1 with
+    | Lor a' b' => Lor l1 l2
+    | Land a' b' =>
+      Land (merge' l2 a') (merge' l2 b')
+    | Lneg (Latom _) => Lor l1 l2
+    | Latom a => Lor l1 l2
+    | _ => l1
+    end
+  | Lneg (Latom _) =>
+    match l1 with
+    | Lor a' b' => Lor l1 l2
+    | Land a' b' =>
+      Land (merge' l2 a') (merge' l2 b')
+    | Lneg (Latom _) => Lor l1 l2
+    | Latom a => Lor l1 l2
+    | _ => l1
+    end
+  | Latom _ =>
+    match l1 with
+    | Lor a' b' => Lor l1 l2
+    | Land a' b' =>
+      Land (merge' l2 a') (merge' l2 b')
+    | Lneg (Latom _) => Lor l1 l2
+    | Latom a => Lor l1 l2
+    | _ => l1
+    end
+  | _ => l1
+  end.
+
+Next Obligation.
+  simpl.
+  assert (variant b > 0) by apply variant_pos.
+  lia.
+Defined.
+
+Next Obligation.
+  simpl.
+  assert (variant a > 0) by apply variant_pos.
+  lia.
+Defined.
+
+Next Obligation.
+  simpl.
+  assert (variant b' > 0) by apply variant_pos.
+  lia.
+Defined.
+
+Next Obligation.
+  simpl.
+  assert (variant a' > 0) by apply variant_pos.
+  lia.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  simpl.
+  assert (variant a' > 0) by apply variant_pos.
+  assert (variant b' > 0) by apply variant_pos.
+  lia.
+Defined.
+
+Next Obligation.
+  simpl.
+  assert (variant a' > 0) by apply variant_pos.
+  assert (variant b' > 0) by apply variant_pos.
+  lia.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  simpl.
+  assert (variant a' > 0) by apply variant_pos.
+  assert (variant b' > 0) by apply variant_pos.
+  lia.
+Defined.
+
+Next Obligation.
+  simpl.
+  assert (variant a' > 0) by apply variant_pos.
+  assert (variant b' > 0) by apply variant_pos.
+  lia.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+Next Obligation.
+  repeat split; discriminate.
+Defined.
+
+
+Lemma merge_correct:
+  forall l1 l2 P Q v,
+    semL (proj1_sig (merge l1 l2 P Q)) v = orb (semL l1 v) (semL l2 v).
+Proof.
+  intros.
+Admitted.
+
+Check(sig).
+
+Lemma merge'_correct:
+  forall l1 l2 v,
+    semL (merge' l1 l2) v = orb (semL l1 v) (semL l2 v).
+Proof.
+  intros.
+  induction l1.
+  - induction l2.
+    + simpl. auto.
+Admitted.
+
 Program Fixpoint distrib_or (l : logic) (P : rule_no_impl l) (Q : rule_no_neg l) : {l' : logic | distributed l'} :=
   match l with
   | Land a b =>
