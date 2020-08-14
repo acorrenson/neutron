@@ -211,7 +211,7 @@ Proof.
   - apply functional_extensionality.
     intro.
     rewrite helper, IHl.
-    reflexivity.
+    reflexivity.£
   - reflexivity.
 Qed.
 
