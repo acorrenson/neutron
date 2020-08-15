@@ -1,10 +1,10 @@
 Require Import ZArith Psatz.
 Require Import Lists.List.
-Require Import Recdef.
-Require Import Program.Wf.
-Require Import Program.Equality.
-Require Import Logic.FunctionalExtensionality.
 Import ListNotations.
+
+(********************************************)
+(* Languages definitions                    *)
+(********************************************)
 
 (* Logic language *)
 Inductive logic : Set :=
@@ -32,8 +32,10 @@ Inductive logic_2 : Set :=
   | L2or    : logic_2 -> logic_2 -> logic_2
   | L2lit   : literal -> logic_2.
 
+(* Clauses *)
 Definition clause := list literal.
 
+(* CNF *)
 Definition logic_3 := list clause.
 
 (* Conversion algorithm from logic to logic_1 *)
@@ -68,15 +70,18 @@ Fixpoint remove_neg' (sign : bool) (l : logic_1) : logic_2 :=
 
 Definition remove_neg := remove_neg' true.
 
+(* Distribute a clause on a set of clauses *)
 Definition merge_clause (c : clause) (l : logic_3) :=
   map (fun c' => c ++ c') l.
 
+(* Double distribute a set of clauses on another one *)
 Fixpoint merge (l1 : logic_3) (l2 : logic_3) : logic_3 :=
   match l1 with
   | [] => []
   | c::cs => (merge_clause c l2) ++ (merge cs l2)
   end.
 
+(* Logic_2 to logic_3 conversion *)
 Fixpoint cnf' (l : logic_2) : logic_3 :=
   match l with
   | L2and a b => (cnf' a) ++ (cnf' b)
@@ -84,10 +89,15 @@ Fixpoint cnf' (l : logic_2) : logic_3 :=
   | L2lit a => [[a]]
   end.
 
+(* CNF conversion *)
 Definition cnf (l : logic) : logic_3 :=
     cnf' (remove_neg (remove_impl l)).
 
+(********************************************)
+(* Semantics for the intermediate languages *)
+(********************************************)
 
+(* Denotational semantic for the logic language *)
 Fixpoint semL (l : logic) (v : nat -> bool) : bool :=
   match l with
   | Land a b =>
@@ -101,6 +111,7 @@ Fixpoint semL (l : logic) (v : nat -> bool) : bool :=
   | Latom n => v n
   end.
 
+(* Denotational semantic for the logic_1 language *)
 Fixpoint semL1 (l : logic_1) (v : nat -> bool) : bool :=
   match l with
   | L1and a b =>
@@ -112,6 +123,7 @@ Fixpoint semL1 (l : logic_1) (v : nat -> bool) : bool :=
   | L1atom n => v n
   end.
 
+(* Denotational semantic for the logic_2 language *)
 Fixpoint semL2 (l : logic_2) (v : nat -> bool) : bool :=
   match l with
   | L2and a b =>
@@ -122,6 +134,7 @@ Fixpoint semL2 (l : logic_2) (v : nat -> bool) : bool :=
   | L2lit (Neg n) => negb (v n)
   end.
 
+(* Denotational semantic for clauses *)
 Fixpoint semC (c : clause) (v : nat -> bool) : bool :=
   match c with
   | [] => false
@@ -129,12 +142,18 @@ Fixpoint semC (c : clause) (v : nat -> bool) : bool :=
   | Neg n::xs => orb (negb (v n)) (semC xs v)
   end.
 
+(* Denotational semantic for CNFs *)
 Fixpoint semL3 (l : logic_3) (v : nat -> bool) : bool :=
   match l with
   | [] => true
   | c::cs => andb (semC c v) (semL3 cs v)
   end.
 
+(********************************************)
+(* Correction proofs                        *)
+(********************************************)
+
+(* [remove_impl] preserve the semantic *)
 Theorem remove_impl_correct:
   forall l v, semL l v = semL1 (remove_impl l) v.
 Proof.
@@ -147,6 +166,7 @@ Proof.
   - reflexivity.
 Qed.
 
+(* [remove_neg' false] inverse the denotations *)
 Lemma remove_neg_false_negb:
   forall l v, semL2 (remove_neg' false l) v = negb (semL2 (remove_neg' true l) v).
 Proof.
@@ -158,6 +178,7 @@ Proof.
   - reflexivity.
 Qed.
 
+(* [remove_neg] preserve the semantic *)
 Theorem remove_neg_correct:
   forall l v, semL1 l v = semL2 (remove_neg l) v.
 Proof.
@@ -170,16 +191,7 @@ Proof.
   - reflexivity.
 Qed.
 
-
-Lemma merge_comm:
-  forall l v, semL3 (merge l []) v = semL3 (merge [] l) v.
-Proof.
-  intros.
-  induction l; simpl.
-  - reflexivity.
-  - rewrite IHl. simpl; reflexivity.
-Qed.
-
+(* semantic of the union of two clauses *)
 Theorem semC_union:
   forall c1 c2 v, semC (c1 ++ c2) v = orb (semC c1 v) (semC c2 v).
 Proof.
@@ -189,6 +201,7 @@ Proof.
   - destruct a; rewrite IHc1, Bool.orb_assoc; reflexivity.
 Qed.
 
+(* semantic of the union of two set of clauses *)
 Theorem semL3_union:
   forall c1 c2 v, semL3 (c1 ++ c2) v = andb (semL3 c1 v) (semL3 c2 v).
 Proof.
@@ -198,6 +211,7 @@ Proof.
   - rewrite IHc1, Bool.andb_assoc; reflexivity.
 Qed.
 
+(* [merge_clause] preserve the semantic *)
 Theorem merge_clause_correct:
   forall c l v, semL3 (merge_clause c l) v = orb (semC c v) (semL3 l v).
 Proof.
@@ -207,6 +221,7 @@ Proof.
   - rewrite semC_union, IHl, Bool.orb_andb_distrib_r; reflexivity.
 Qed.
 
+(* [merge] preserve the semantic *)
 Theorem merge_correct:
   forall l1 l2 v, orb (semL3 l1 v) (semL3 l2 v) = semL3 (merge l1 l2) v.
 Proof.
@@ -220,6 +235,7 @@ Proof.
     reflexivity.
 Qed.
 
+(* [cnf'] preserve the semantic *)
 Theorem cnf'_correct:
   forall l v, semL2 l v = semL3 (cnf' l) v.
 Proof.
@@ -230,6 +246,7 @@ Proof.
   - destruct l; rewrite Bool.andb_comm, Bool.orb_comm; simpl; reflexivity.
 Qed.
 
+(* [cnf] preserve the semantic *)
 Theorem cnf_correct:
   forall l v, semL l v = semL3 (cnf l) v.
 Proof.
