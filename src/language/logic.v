@@ -1,6 +1,7 @@
-Require Import ZArith Psatz.
+Require Import ZArith.
 Require Import Lists.List.
 Import ListNotations.
+Require Import Coq.extraction.ExtrOcamlNatInt.
 
 (********************************************)
 (* Languages definitions                    *)
@@ -257,3 +258,5 @@ Proof.
           cnf'_correct.
   reflexivity.
 Qed.
+
+Recursive Extraction cnf.
